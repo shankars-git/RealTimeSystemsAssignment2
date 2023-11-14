@@ -1,0 +1,102 @@
+#VRML_SIM R2020b utf8
+WorldInfo {
+  info [
+    "Copyright (C) 2006 Laboratory of Intelligent Systems (LIS), EPFL"
+    "Thanks to jean-christophe.zufferey@epfl.ch"
+  ]
+  basicTimeStep 1
+  coordinateSystem "NUE"
+}
+Viewpoint {
+  orientation 0.982849424444675 0.1726839253761991 0.06470912443727171 5.554583817467799
+  position -0.0374999332289675 0.6884257860250276 1.0604693810938155
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  translation 0.0155638 0 0.0409686
+  rotation 0 1 0 0.418879
+  floorSize 0.8 1.1
+  floorTileSize 0.6 1
+  floorAppearance PBRAppearance {
+    baseColorMap ImageTexture {
+      url [
+        "textures/floor.png"
+      ]
+      repeatS FALSE
+      repeatT FALSE
+    }
+    roughness 0.2
+    metalness 0
+  }
+  wallHeight 0.05
+}
+DEF OBSTACLE1 Solid {
+  translation 0.0871577 0.025 -0.192401
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 1 0.1 0.3
+        roughness 0.5
+        metalness 0
+      }
+      geometry DEF BOX1 Box {
+        size 0.05 0.05 0.05
+      }
+    }
+  ]
+  name "red box"
+  boundingObject USE BOX1
+}
+DEF OBSTACLE2 Solid {
+  translation -0.353549 0.025 -0.0575097
+  rotation 0 1 0 3.82203
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 1 0.501961 1
+        roughness 0.5
+        metalness 0
+      }
+      geometry DEF BOX2 Box {
+        size 0.08 0.05 0.08
+      }
+    }
+  ]
+  name "pink box"
+  boundingObject USE BOX2
+}
+DEF OBSTACLE3 Solid {
+  translation 0.372592 0.025 0.27458
+  rotation 0 1 0 13.7261
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.501961 0.501961 0.501961
+        roughness 0.5
+        metalness 0
+      }
+      geometry DEF BOX3 Box {
+        size 0.2 0.05 0.05
+      }
+    }
+  ]
+  name "gray box"
+  boundingObject USE BOX3
+}
+DEF EPUCK E-puck {
+  hidden position_0_0 11.939580230214151
+  hidden position_0_1 29.95282639970118
+  hidden rotation_1 1 0 0 0.626790384145022
+  hidden rotation_2 -1 0 0 4.820085170982835
+  translation 0.167678 5.16016e-05 0.0888171
+  rotation -0.0017819896667752538 -0.9999978130045176 0.001094759795284416 2.68936
+  controller "e-puck_line"
+  synchronization FALSE
+  groundSensorsSlot [
+    E-puckGroundSensors {
+    }
+  ]
+}
