@@ -1,108 +1,164 @@
-with Ada.Text_IO;    use Ada.Text_IO;
-with Ada.Real_Time;  use Ada.Real_Time;
+with Ada.Text_IO;   use Ada.Text_IO;
+with Ada.Real_Time; use Ada.Real_Time;
 
 with System;
 
-with Webots_API;   use Webots_API;
+with Webots_API; use Webots_API;
 
 package body Tasks is
-  -------------
-  --  Tasks  --
-  -------------   
-  task HelloworldTask is
-    -- define its priority higher than the main procedure --
-    -- main procedure priority is declared at main.adb:9
-  end HelloworldTask;
-  task body HelloworldTask is
-    Next_Time : Time := Time_Zero;
-  begin
-    loop
-      -- read sensors and print (have a look at webots_api.ads) ----
-      Next_Time := Next_Time + Period_Display;
-      delay until Next_Time;
+   -------------
+   --  Tasks  --
+   -------------
+   task HelloworldTask is
+   -- define its priority higher than the main procedure --
+   -- main procedure priority is declared at main.adb:9
+   end HelloworldTask;
+   task body HelloworldTask is
+      Next_Time : Time := Time_Zero;
+   begin
+      loop
+         -- read sensors and print (have a look at webots_api.ads) ----
+         Next_Time := Next_Time + Period_Display;
+         delay until Next_Time;
 
-      exit when simulation_stopped;
-    end loop;
-  end HelloworldTask;
+         exit when simulation_stopped;
+      end loop;
+   end HelloworldTask;
 
-   type EventID is ( UpPressed , DownPressed , LeftPressed, RightPressed, LightSensor2,UpReleased, DownReleased ,LeftReleased,RightReleased,LightSensor2Off); -- events      
-   
+   type EventID is (Forward, Stop, Continue, LeftTurn, RightTurn); -- events
+
    protected CommonData is
-      procedure Set (V : Integer );
-      function Get return Integer ;
-      private
+      procedure Set (V : EventID);
+      function Get return EventID;
+   private
       -- Data goes here
-         Shared_Data : Integer := 0;
+      Shared_Data : EventID := Forward;
    end CommonData;
 
    protected body CommonData is
-      procedure Set ( V : Integer ) is
+      procedure Set (V : EventID) is
       begin
-         Shared_Data := V ;
-      end Set ;
+         Shared_Data := V;
+      end Set;
       -- functions cannot modify the data
-      function Get return Integer is
+      function Get return EventID is
       begin
-         return Shared_Data ;
-      end Get ;
-   end CommonData ;
+         return Shared_Data;
+      end Get;
+   end CommonData;
 
-    task MotorControlTask is
+   task MotorControlTask is
    end MotorControlTask;
 
    task body MotorControlTask is
-      MotorCommand: Integer;
-         begin
-            loop
-            -- Read driving command from shared data
-            MotorCommand := CommonData.Get;
+      MotorCommand : EventID;
+      Stopped      : Boolean := False;
+      Motor_Speed  : Integer := 700;
 
-            -- Add  implementation here
+   begin
+      loop
+         -- Read driving command from shared data
+         MotorCommand := CommonData.Get;
+         if Stopped and (MotorCommand = Continue) then
+            Stopped := False;
+         end if;
+         if not Stopped then
+            case MotorCommand is
+               when Continue =>
+                  null;
+               when Stop =>
+                  Set_Motor_Speed (RightMotor, 0);
+                  Set_Motor_Speed (LeftMotor, 0);
+                  Stopped := True;
+               when Forward =>
 
-            delay 0.1; 
-            end loop;
+                  Set_Motor_Speed (RightMotor, Motor_Speed);
+                  Set_Motor_Speed (LeftMotor, Motor_Speed);
+               when LeftTurn =>
+                  Set_Motor_Speed (RightMotor, Motor_Speed);
+                  Set_Motor_Speed (LeftMotor, 0);
+               when RightTurn =>
+                  Set_Motor_Speed (RightMotor, 0);
+                  Set_Motor_Speed (LeftMotor, Motor_Speed);
+                  delay 0.1;
+            end case;
+         end if;
+      end loop;
    end MotorControlTask;
 
-  task LineFollowingTask is
+   task LineFollowingTask is
    end LineFollowingTask;
 
    task body LineFollowingTask is
-   SetCommand: Integer;
+      SetCommand           : EventID;
+      Light_Sensor_1_State : Integer := 0;
+      Light_Sensor_2_State : Integer := 0;
+      Light_Sensor_3_State : Integer := 0;
+
    begin
       loop
-         -- Read Light sensors Data and update the Steering command in Shared Data
-         CommonData.Set(SetCommand);
-
+         declare
+            Light_Sensor_1_State : Integer :=
+              webots_API.read_light_sensor (LS1);
+            Light_Sensor_2_State : Integer :=
+              webots_API.read_light_sensor (LS2);
+            Light_Sensor_3_State : Integer :=
+              webots_API.read_light_sensor (LS3);
+         begin
+            -- If LS1 goes on White trun Right
+            if Light_Sensor_1_State > 800 then
+               CommonData.Set (RightTurn);
+               -- IF LS2 is on Black Keep going Forward
+            elsif Light_Sensor_2_State > 300 then
+               CommonData.Set (Forward);
+               -- If LS3 goes on White trun Right
+            elsif Light_Sensor_3_State > 800 then
+               CommonData.Set (LeftTurn);
+            end if;
+         end;
          delay 0.1;
       end loop;
    end LineFollowingTask;
 
-     task DistanceTask is
+   task DistanceTask is
    end DistanceTask;
 
    task body DistanceTask is
-   SetCommand: Integer;
+      SetCommand : EventID;
+      Distance   : Integer;
    begin
       loop
-         -- Read Distance sensors Data and update the Steering command in Shared Data
-         CommonData.Set(SetCommand);
+         Distance := webots_API.read_distance_sensor;
+         if Distance > 100 then
+            CommonData.Set (Stop);
+         else
+            CommonData.Set (Continue);
+         end if;
          delay 0.1;
       end loop;
    end DistanceTask;
 
-  task DisplayTask is
+   task DisplayTask is
    end DisplayTask;
 
    task body DisplayTask is
    begin
-      null;
+      loop
+         Put_Line ("Distance:" & Integer'Image (webots_API.read_distance_sensor));
+         Put_Line ("LS1:" & Integer'Image (webots_API.read_light_sensor (LS1)));
+         Put_Line ("LS2:" & Integer'Image (webots_API.read_light_sensor (LS2)));
+         Put_Line ("LS3:" & Integer'Image (webots_API.read_light_sensor (LS3)));
+         delay 0.1;
+      end loop;
+
    end DisplayTask;
 
-  -- Background procedure required for package
-  procedure Background is begin
-    while not simulation_stopped loop
-      delay 0.25;
-    end loop;
-  end Background;
+   -- Background procedure required for package
+   procedure Background is
+   begin
+      while not simulation_stopped loop
+         delay 0.25;
+      end loop;
+   end Background;
 
 end Tasks;
