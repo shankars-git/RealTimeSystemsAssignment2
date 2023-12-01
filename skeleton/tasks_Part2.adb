@@ -24,10 +24,10 @@ package body Tasks is
       exit when simulation_stopped;
     end loop;
   end HelloworldTask;
+   --- Defining the Events
+   type EventID is ( UpPressed , DownPressed , LeftPressed, RightPressed, LightSensor2,UpReleased, DownReleased ,LeftReleased,RightReleased);      
 
-   type EventID is ( UpPressed , DownPressed , LeftPressed, RightPressed, LightSensor2,UpReleased, DownReleased ,LeftReleased,RightReleased,LightSensor2Off); -- events      
-
-
+   -- Protected Object Event
   protected Event is
       entry Wait (id : out EventID );
       procedure Signal (id : in EventID );
@@ -50,6 +50,7 @@ package body Tasks is
       end Signal ;
    end Event;
 
+   --- Motor Control Task
     task MotorControlTask is
    end MotorControlTask;
 
@@ -58,53 +59,56 @@ task body MotorControlTask is
    Motor_Speed : Integer :=500;
 begin
    loop
-      -- Waiting for an event
       declare
          Current_Event : EventID;
       begin
+         -- Waiting for an event
          Event.Wait(Current_Event);
          delay 0.1;
          ---Based on Event_ID Set The Motors speed and Direction
          case Current_Event is
             when UpPressed =>
+               -- Go Front
                Set_Motor_Speed(RightMotor, Motor_Speed);
                Set_Motor_Speed(LeftMotor,  Motor_Speed);
             when DownPressed =>
+               -- Go Back
                Set_Motor_Speed(RightMotor, -Motor_Speed);
                Set_Motor_Speed(LeftMotor,  -Motor_Speed);
             when LeftPressed =>
+               -- Go left
                Set_Motor_Speed(RightMotor, Motor_Speed);
                Set_Motor_Speed(LeftMotor, -Motor_Speed);
             when RightPressed =>
+               -- Go Right
                Set_Motor_Speed(RightMotor, -Motor_Speed);
                Set_Motor_Speed(LeftMotor, Motor_Speed);
             when LightSensor2 =>
-                Set_Motor_Speed(RightMotor, -Motor_Speed);
-                  Set_Motor_Speed(LeftMotor,  +Motor_Speed);
+               -- Black encountered , Turn the bot
+               Set_Motor_Speed(RightMotor, -Motor_Speed);
+               Set_Motor_Speed(LeftMotor,  +Motor_Speed);
              when UpReleased | DownReleased | LeftReleased | RightReleased  =>
                -- Stop the motors for other events
                Set_Motor_Speed(RightMotor, 0);
-               Set_Motor_Speed(LeftMotor, 0);
-            when LightSensor2Off =>
-             --Set_Motor_Speed(RightMotor, 0);
-             --Set_Motor_Speed(LeftMotor,  0);
-               Put_Line("Hi");              
+               Set_Motor_Speed(LeftMotor, 0);             
          end case;
       end;
    end loop;
 end MotorControlTask;
+      
+   --- Event Dispatcher Task
     task EventDispatcherTask is
     end EventDispatcherTask;
 
    task body EventDispatcherTask is
-      -- Variable to Hold Previous Button Press state
+      -- Variable to Hold Previous Button Press state and default inital value of Light Sensor
       Previous_Button_Press_State_Up : Boolean := False;
       Previous_Button_Press_State_Down : Boolean := False;
       Previous_Button_Press_State_Left : Boolean := False;
       Previous_Button_Press_State_Right : Boolean := False;
       Previous_Light_Sensor_2_State : Integer := 0;
 
-      -- Event ID's
+      -- Event ID's are mapped
       UpButtonPressed : constant EventID := UpPressed;
       DownButtonPressed : constant EventID := DownPressed;
       LeftButtonPressed : constant EventID := LeftPressed;
@@ -114,11 +118,10 @@ end MotorControlTask;
       LeftButtonReleased: constant EventID := LeftReleased;
       RightButtonReleased : constant EventID := RightReleased;
       LightSensorTwoActive : constant EventID := LightSensor2;
-      LightSensorTwoInActive : constant EventID := LightSensor2Off;
       Minor_Delay    : constant Duration := 0.1;
    begin
       loop
-         -- Call  Webots API function to read  the button press from Keyboard
+         -- Call  Webots API function to read  the button press from Keyboard and read the light senor value from the simulation
          declare
             Present_Button_Pressed_Up : Boolean := Webots_API.button_pressed(UpButton);
             Present_Button_Pressed_Down : Boolean := Webots_API.button_pressed(DownButton);
@@ -126,7 +129,7 @@ end MotorControlTask;
             Present_Button_Pressed_Right : Boolean := Webots_API.button_pressed(RightButton);
             Present_Light_Sensor_2_State : Integer := webots_API.read_light_sensor(LS2);
          begin
-            -- Compare the Present state with the Previous state
+            -- Compare the Present state with the Previous state for all 4 buttons
             if Present_Button_Pressed_Up /= Previous_Button_Press_State_Up then
                -- State has changed, release the event
                if Present_Button_Pressed_Up then
@@ -177,14 +180,8 @@ end MotorControlTask;
                Put_Line("LS2 Is on Black , Stop the Bot");
                Put_Line(Integer'Image(Present_Light_Sensor_2_State));
             elsif Present_Light_Sensor_2_State > 800 then
-               Event.Signal(LightSensorTwoInActive);
                Put_Line("LS2 is Not on Black");
-               --Put_Line(Integer'Image(Present_Light_Sensor_2_State));
-            --else
-              -- Put_Line("LS2 No state Change");
             end if;
-            --Previous_Light_Sensor_2_State := Present_Light_Sensor_2_State;
-         --end if;
          end;
          delay Minor_Delay;
         end loop;

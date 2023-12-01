@@ -25,8 +25,10 @@ package body Tasks is
       end loop;
    end HelloworldTask;
 
-   type EventID is (Forward, Stop, Continue, LeftTurn, RightTurn); -- events
-
+  -- Events for the Bot Actions
+   type EventID is (Forward, Stop, Continue, LeftTurn, RightTurn);
+   
+  -- Common Shared Data
    protected CommonData is
       procedure Set (V : EventID);
       function Get return EventID;
@@ -46,19 +48,20 @@ package body Tasks is
          return Shared_Data;
       end Get;
    end CommonData;
-
+  -- Motor Control Task
    task MotorControlTask is
    end MotorControlTask;
 
    task body MotorControlTask is
       MotorCommand : EventID;
-      Stopped      : Boolean := False;
-      Motor_Speed  : Integer := 700;
+      Stopped      : Boolean := False; -- Flag to see if bot is Stopped
+      Motor_Speed  : Integer := 500;
 
    begin
       loop
          -- Read driving command from shared data
          MotorCommand := CommonData.Get;
+         -- For the Continue Logic
          if Stopped and (MotorCommand = Continue) then
             Stopped := False;
          end if;
@@ -67,17 +70,20 @@ package body Tasks is
                when Continue =>
                   null;
                when Stop =>
+                  -- Stop the Bot
                   Set_Motor_Speed (RightMotor, 0);
                   Set_Motor_Speed (LeftMotor, 0);
                   Stopped := True;
                when Forward =>
-
+                  -- Move the Bot forward
                   Set_Motor_Speed (RightMotor, Motor_Speed);
                   Set_Motor_Speed (LeftMotor, Motor_Speed);
                when LeftTurn =>
+                  -- Turn Left
                   Set_Motor_Speed (RightMotor, Motor_Speed);
                   Set_Motor_Speed (LeftMotor, 0);
                when RightTurn =>
+                  -- Turn Right
                   Set_Motor_Speed (RightMotor, 0);
                   Set_Motor_Speed (LeftMotor, Motor_Speed);
                   delay 0.1;
@@ -85,7 +91,7 @@ package body Tasks is
          end if;
       end loop;
    end MotorControlTask;
-
+  -- Task for Line Following
    task LineFollowingTask is
    end LineFollowingTask;
 
@@ -98,6 +104,7 @@ package body Tasks is
    begin
       loop
          declare
+            -- Read the three light Sensor Values
             Light_Sensor_1_State : Integer :=
               webots_API.read_light_sensor (LS1);
             Light_Sensor_2_State : Integer :=
@@ -119,7 +126,7 @@ package body Tasks is
          delay 0.1;
       end loop;
    end LineFollowingTask;
-
+  -- Distance Task to read the Distance Sensor value and Signal action
    task DistanceTask is
    end DistanceTask;
 
@@ -130,14 +137,16 @@ package body Tasks is
       loop
          Distance := webots_API.read_distance_sensor;
          if Distance > 100 then
+            -- Stop the bot if Object comes in between
             CommonData.Set (Stop);
          else
+            -- Continue to follow balck line if Object is moved
             CommonData.Set (Continue);
          end if;
          delay 0.1;
       end loop;
    end DistanceTask;
-
+  -- Display Task to Display Info on the Console
    task DisplayTask is
    end DisplayTask;
 
